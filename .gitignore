@@ -1,0 +1,8 @@
+Makefile
+NORTHWND.MDF
+NORTHWND.db
+google.rb
+mysql2sqlite.sh
+shp/
+zip/
+node_modules
