@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
+<style>
+
+h1 {
+  position: absolute;
+  top: 350px;
+  left: 480px;
+  font-family: "Avenir Next", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 18px;
+  text-align: center;
+  width: 960px;
+}
+
+
+h2 {
+  position: absolute;
+  top: 395px;
+  left: 480px;
+  font-family: "Avenir Next", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 18px;
+  text-align: center;
+  width: 960px;
+}
+
+.geo-node{
+  fill:steelblue;
+}
+
+
+</style>
+<body>
+<h1></h1>
+</body>
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script src="http://d3js.org/queue.v1.min.js"></script>
+<script src="http://d3js.org/topojson.v1.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js"></script>
+<script>
+var body = document.querySelector('body');
+
+var container = document.createElement('div');
+body.appendChild(container);
+container.setAttribute('class','col-md-4 container');
+
+var div_table = document.createElement('div');
+container.appendChild(div_table);
+div_table.setAttribute("class","panel panel-success");
+
+var div_panel_heading = document.createElement('div');
+div_table.appendChild(div_panel_heading);
+div_panel_heading.setAttribute('class','panel-heading');
+
+var header_3 = document.createElement('h3');
+div_panel_heading.appendChild(header_3);
+header_3.setAttribute('class','panel-title');
+
+
+var panel_body = document.createElement('div');
+div_table.appendChild(panel_body);
+panel_body.setAttribute('class','panel-body');
+
+var p_table_desc = document.createElement('p');
+panel_body.appendChild(p_table_desc);
+p_table_desc.innerText="Sales of distinct Products in each City where Customer is based; ranked by Total Revenues per product. \n\n Aggregate sales are indicated on the map. The area of the circle for each city is proportional to the volume of sales in dollar amount."
+
+var scroll_div = document.createElement('div');
+div_table.appendChild(scroll_div);
+scroll_div.setAttribute('class','scroll_div');
+
+var table = document.createElement('table');
+scroll_div.appendChild(table);
+table.setAttribute('class','table');
+
+var thead = document.createElement('thead');
+table.appendChild(thead);
+var tr = document.createElement('tr');
+tr.setAttribute('class','tr_head')
+thead.appendChild(tr);
+
+var th_array = ["Product Name","Total Sales","Quantity Sold"];
+
+for (i=0;i<th_array.length;i++)
+{
+  var th = document.createElement('th');
+  tr.appendChild(th);
+  th.innerText=th_array[i];
+}
+
+var tbody = document.createElement('tbody');
+table.appendChild(tbody);
+
+
+var createRows = function(param)
+{
+
+
+  var tr = document.createElement('tr');
+  tbody.appendChild(tr);
+  var td1 = document.createElement('td');
+  tr.appendChild(td1);
+  td1.innerText=param.ProductName;
+  td1.setAttribute('class','theader');
+
+  var td2 = document.createElement('td');
+  tr.appendChild(td2);
+  td2.innerText=d3.format("$")(d3.round(param.totalrev,2));
+  td2.setAttribute("class",'theader');
+
+  var td3 = document.createElement('td');
+  tr.appendChild(td3);
+  td3.innerText=param.sumquant;
+  td3.setAttribute("class","theader");
+
+  d3.selectAll(".theader")
+  .style("opacity",1)
+
+};
+
+var width = 860,
+    height = 800;
+
+var projection = d3.geo.orthographic()
+    .scale(400)
+    .translate([width / 2, height / 2])
+    .clipAngle(90);
+
+var canvas = d3.select("body").append("canvas")
+    .attr("width", width)
+    .attr("height", height);
+
+var c = canvas.node().getContext("2d");
+
+var path = d3.geo.path()
+    .projection(projection)
+    // .pointRadius(2)
+.context(c);
+
+
+var h1 = d3.select("body").append("h1")
+var h2 = d3.select("body").append("h2")
+
+var title = d3.select("h1");
+var revenue = d3.select("h2");
+
+queue()
+    .defer(d3.json, "../topo/world-110m.json")
+    .defer(d3.json,"./geocoding.json")
+    .defer(d3.csv, "./orders.csv")
+    .await(ready);
+
+function ready(error, world, cities, orders) {
+  var globe = {type: "Sphere"},
+      land = topojson.feature(world, world.objects.land),
+      countries = topojson.feature(world, world.objects.countries).features,
+      borders = topojson.mesh(world, world.objects.countries, function(a, b) { return a !== b; }),
+      // geoNode = {type: "Point", coordinates: [d.results[0].geometry.location.lng,d.results[0].geometry.location.lat]}
+      i = -1,
+      n = countries.length;
+
+      var filtered = _.filter(cities,function(o){return o.results.length>=1});
+
+
+  // countries = countries.filter(function(d) {
+  //   return names.some(function(n) {
+  //     if (d.id == n.id) return d.name = n.name;
+  //   });
+  // }).sort(function(a, b) {
+  //   return a.name.localeCompare(b.name);
+  // });
+
+  (function transition() {
+
+    d3.transition()
+        .duration(1500)
+        .each("start", function() {
+          title.text(filtered[i = (i + 1) % n].results[0].address_components[0].long_name);
+          revenue.text("$"+d3.format(",")(_.filter(orders,function(o){return o.City===filtered[i = (i + 0) % n].results[0].address_components[0].long_name})[0].Ordertotals));
+          d3.xhr('/northwind/'+filtered[i = (i + 0) % n].results[0].address_components[0].long_name, function(data) {
+
+                var parsed = JSON.parse(data.response);
+
+                parsed.forEach(function(each)
+                {
+                  header_3.innerText="Northwind Sales: \n \n Products Sold in "+filtered[i = (i + 0) % n].results[0].address_components[0].long_name+ " : "+ d3.format(",")(_.filter(orders,function(o){return o.City===filtered[i = (i + 0) % n].results[0].address_components[0].long_name})[0].Ordertotals);
+                  createRows(each);
+                })
+                });
+        })
+        .tween("rotate", function() {
+          // var p = d3.geo.centroid(countries[i]),
+            var p = [filtered[i].results[0].geometry.location.lng,filtered[i].results[0].geometry.location.lat];
+            var dataset = _.filter(orders,function(o){return o.City===filtered[i = (i + 0) % n].results[0].address_components[0].long_name});
+            var totals = +dataset[0].Ordertotals;
+            var geoNode = {type: "Point", coordinates: p};
+
+            var r = d3.interpolate(projection.rotate(), [-p[0], -p[1]]);
+
+        return function(t) {
+          projection.rotate(r(t));
+          c.clearRect(0, 0, width, height);
+          c.fillStyle = "#bbb", c.beginPath(), path(land), c.fill();
+          // c.fillStyle = "#f00", c.beginPath(), path(countries[i]), c.fill();
+          c.strokeStyle = "#fff", c.lineWidth = .5, c.beginPath(), path(borders), c.stroke();
+          c.lineWidth = 2, c.beginPath(), path(globe), c.stroke();
+          c.fillStyle = "rgba(255, 0, 0, 0.6)", c.beginPath(), path.pointRadius(3+(totals/357)/Math.PI)(geoNode), c.fill();
+
+        };
+
+        })
+      .transition()
+        .each("end", transition);
+
+      var selectme =   d3.selectAll(".theader");
+
+        selectme
+        .transition()
+        .duration(1500)
+        .style("opacity",0)
+
+        selectme
+        .classed("remove",true)
+
+        window.setTimeout(function()
+        {
+          d3.selectAll(".remove")
+          .style("display","none");
+        },1500)
+
+
+  })();
+
+
+
+
+
+// };
+
+
+
+}
+
+</script>

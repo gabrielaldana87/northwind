@@ -19,4 +19,4 @@ select distinct a.City,a.Country,count( distinct a.CustomerID),sum((c.UnitPrice*
 
 select sum(UnitPrice*Quantity) from (select distinct a.OrderID,b.ProductID, b.UnitPrice,b.Quantity from orders as a inner join 'Order Details' as b on a.OrderID=b.OrderID inner join customers as c on c.CustomerID=a.CustomerID where c.City="Berlin");
 
-select distinct a.OrderID, b.ProductID, b.UnitPrice, b.Quantity, b.Discount from orders as a inner join 'Order Details' as b on a.OrderID=b.OrderID inner join customers as c on c.CustomerID=a.CustomerID where c.City="Cowes";
+select distinct d.ProductName, sum((b.UnitPrice*(1.0-b.Discount)*b.Quantity)) as totalrev, sum(b.Quantity) as sumquant from orders as a inner join 'Order Details' as b on a.OrderID=b.OrderID inner join products as d on d.ProductID=b.ProductID inner join customers as c on c.CustomerID=a.CustomerID where c.City="Cowes" group by d.ProductName order by totalrev desc;
